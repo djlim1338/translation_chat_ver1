@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <title>telegram bot chat</title>
+        <?php
+            include("../mysqlCon.php");
+            if($_SESSION["id"] == null) header("Location:../"); // 로그인 상태가 아니면 강제로 메인으로 이동
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+
+            try{$publicRoomId=$_POST['publicRoom'];}
+            catch(exception $e){$publicRoomId=null;}
+
+            if($publicRoomId!=null){
+                $sqlStr="
+                    SELECT COUNT(*) FROM chatLink
+                    WHERE user='".$_SESSION['id']."'
+                    AND chatId='".$publicRoomId."'
+                ";
+
+                $result=mysqli_query($conn, $sqlStr);
+                $row=mysqli_fetch_array($result);
+                if($row[0] > 0){
+                    echo "이미 참여중인 방입니다!";
+                }
+                else{
+                    $sqlStr="INSERT INTO chatLink(chatId, user) VALUES('".$publicRoomId."', '".$_SESSION['id']."')";
+                    $result=mysqli_query($conn, $sqlStr);
+                    echo "새로운 방에 입장하셨습니다!<br>";
+                    echo "참여중인 방에서 선택해 주세요!<br>";
+                }
+
+            }
+            else if($_POST['outCheck'] == 'true'){
+                $sqlStr="DELETE FROM chatLink WHERE chatId='".$_POST['privateRoom']."' AND user='".$_SESSION['id']."'";
+                $result=mysqli_query($conn, $sqlStr);
+
+                $sqlStr="SELECT * FROM chatRoom WHERE chatId='".$_POST['privateRoom']."'";
+                $result=mysqli_query($conn, $sqlStr);
+                $row=mysqli_fetch_array($result);
+                if($row['hostId'] == $_SESSION['id']){ # 퇴장한 사람이 호스트라면
+                    $sqlStr="SELECT user FROM chatLink WHERE chatId='".$_POST['privateRoom']."'";
+                    $result=mysqli_query($conn, $sqlStr);
+                    $row=mysqli_fetch_array($result);
+                    if(count($row)==0){ # 마지막 사람이 나간거면 해당 방 삭제
+                        $sqlStr="DELETE FROM chatLink WHERE chatId='".$_POST['privateRoom']."'"; # 방 링크 삭제
+                        $result=mysqli_query($conn, $sqlStr);
+                        $sqlStr="DELETE FROM chatRoom WHERE chatId='".$_POST['privateRoom']."'"; # 방 삭제
+                        $result=mysqli_query($conn, $sqlStr);
+                        $sqlStr="DELETE FROM message WHERE chatId='".$_POST['privateRoom']."'"; # message 삭제
+                        $result=mysqli_query($conn, $sqlStr);
+                        echo "마지막 인원이 나가서 채팅방이 파괴됐습니다.";
+                        //echo $sqlStr;
+                    }
+                    else{ # 아니면 다음 사람에게 호스트 넘김
+                        $nextHost=$row['user'];
+                        $sqlStr="UPDATE chatRoom SET hostId='".$nextHost."' WHERE chatId='".$_POST['privateRoom']."'";
+                        $result=mysqli_query($conn, $sqlStr);
+                        echo "호스트가 나가서 다음사람에게 호스트가 넘어갔습니다.";
+                        //echo $sqlStr;
+                    }
+                }
+                else{
+                    echo "선택한 방에서 나가셨습니다!";
+                    //echo $row['hostId'];
+                    //echo $_SESSION['id'];
+                }
+            }
+
+        ?>
+    </head>
+    <body>
+        <h1>Telegram bot message translation</h1>
+        <a href="../">메인으로</a><br><br>
+
+        <div>
+            <form id="fmPrivateRoom" method="POST" action="./chatRoom.phtml">
+                참여중인 방 선택 :<br>
+                <select id="privateRoom" name="privateRoom" size="8" style="width:300px">
+                    <?php
+                        $sqlStr="
+                            SELECT DISTINCT cr.chatId, cr.roomName, cr.hostId, cr.state, cl.chatId, cl.user
+                            FROM chatRoom cr, chatLink cl
+                            WHERE cr.chatId = cl.chatId
+                            AND cl.user = '".$_SESSION['id']."'
+                        ";
+                        $result=mysqli_query($conn, $sqlStr);
+                        while($row = mysqli_fetch_array($result)){
+                            if($row['state'] == true){$opState='공개방';}
+                            else{$opState='비공개방';}
+                            echo "<option value='".$row['chatId']."'>".$row['roomName']."[".$row['hostId']."](".$opState.")</option>";
+                        }
+                    ?>
+                </select>
+                <input id='fmPrivBtnOut' type='button' value='채팅방 나가기', onclick="privateOutRoom()">
+                <input id='outCheck' type='hidden' name='outCheck' value='false'>
+                <input id='networkLocation' type='hidden' name='networkLocation' value=''>
+                <!--
+                <input id='fmPrivBtn' type='button' value='채팅 시작하기[내부망]', onclick="privateSubmit('192.168.219.8:51954')">
+                <input id='fmPrivBtn' type='button' value='채팅 시작하기[외부망]', onclick="privateSubmit('182.228.58.73:51954')">
+                -->
+                <input id='fmPrivBtn' type='button' value='채팅 시작하기[내부망]', onclick="privateSubmit('192.168.0.50:60002')">
+                <input id='fmPrivBtn' type='button' value='채팅 시작하기[외부망]', onclick="privateSubmit('203.250.133.18:60002')">
+            </form>
+        </div>
+        <div>
+            <form id="fmPublicRoom" method="POST" action="./mainRoom.phtml">
+                공개방 방 선택 :<br>
+                <select id="publicRoom" name="publicRoom" size="8" style="width:300px">
+                    <?php
+                        /*
+                        $sqlStr="
+                            SELECT DISTINCT cr.chatId, cr.roomName, cr.hostId, cr.state, cl.chatId, cl.user
+                            FROM chatRoom cr, chatLink cl
+                            WHERE cr.state = '1'
+                            AND cr.chatId = cl.chatId
+                            AND cl.user = '".$_SESSION['id']."'
+                        ";
+                        */
+                        $sqlStr="
+                            SELECT chatId, roomName, hostId, state
+                            FROM chatRoom
+                            WHERE state = '1'
+                        ";
+                        //$sqlStr="SELECT chatId, roomName, hostId FROM chatRoom WHERE state='1'";
+                        $result=mysqli_query($conn, $sqlStr);
+                        while($row = mysqli_fetch_array($result)){
+                            if($row['state'] == true){$opState='공개방';}
+                            else{$opState='비공개방';}
+                            echo "<option value='".$row['chatId']."'>".$row['roomName']."[".$row['hostId']."](".$opState.")</option>";
+                        }
+                    ?>
+                </select>
+                <input id='fmPublBtn' type='button' value='방에 새로 참여하기', onclick="publicSubmit()">
+            </form>
+        </div>
+        <div>
+            <a href="./makeChatRoom.phtml">방 만들기</a>
+        </div>
+        <script language="javascript">
+
+            function privateSubmit(ioValue){
+                var privateForm=document.getElementById('fmPrivateRoom'); // 개인 채팅방 선택 form
+                var selectObj=document.getElementById('privateRoom'); // 개인 채팅방 선택 select
+                var netLoc=document.getElementById('networkLocation'); // 내/외부에 따라 주소가 다름. loopback이 안돼서..
+                if(selectObj.value.length < 1){alert("방을 선택하지 않으셨습니다!");}
+                else{
+                    netLoc.value=ioValue;
+                    privateForm.submit();
+                }
+            }
+
+            function privateOutRoom(){
+                var privateForm=document.getElementById('fmPrivateRoom');
+                var selectObj=document.getElementById('privateRoom');
+                var outCheck=document.getElementById('outCheck');
+                if(selectObj.value.length < 1){alert("방을 선택하지 않으셨습니다!");}
+                else{
+                    var outCk=confirm("해당 방을 나가시겠습니까?");
+                    if(outCk){
+                        outCheck.value='true';
+                        privateForm.action='./mainRoom.phtml';
+                        privateForm.submit();
+                    }
+                }
+            }
+
+            function publicSubmit(){
+                var publicForm=document.getElementById('fmPublicRoom');
+                var selectObj=document.getElementById('publicRoom');
+                if(selectObj.value.length < 1){alert("방을 선택하지 않으셨습니다!");}
+                else{publicForm.submit();}
+            }
+
+        </script>
+    </body>
+</html>

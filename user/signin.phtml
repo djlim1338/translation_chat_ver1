@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <title>signin</title>
+        <?php 
+            include("../mysqlCon.php");
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+
+            try{$dataId = $_POST['id'];}
+            catch(Exception $e){$dataId = null;;}
+            try{$dataPw = $_POST['pw'];}
+            catch(Exception $e){$dataPw = null;}
+            try{$dataLN = $_POST['lastName'];}
+            catch(Exception $e){$dataLN = null;}
+            try{$dataFN = $_POST['firstName'];}
+            catch(Exception $e){$dataFN = null;}
+
+            if($dataId == null){
+            }
+            else{
+                $sqlStr = "SELECT COUNT(*) FROM user WHERE id = '".$dataId."'";
+#               echo "[".$sqlStr."]<br>";
+                $result = mysqli_query($conn, $sqlStr);
+
+                $row = mysqli_fetch_array($result);
+#               echo "[".$row[0]."]<br>";
+                if ($row[0] > 0){
+                    echo "중복되는 ID가 존재합니다! 다시 입력하세요!<br>";
+                }else{
+                    try{
+                        $sqlStr = "INSERT INTO user(id, password, firstName, lastName) VALUES('".$dataId."', hex(aes_encrypt('".$dataPw."', 'D')), '".$dataFN."', '".$dataLN."')";
+                        $result = mysqli_query($conn, $sqlStr);
+#                        echo "회원가입 성공!<br>";
+#                        echo $sqlStr;
+                        $dataId = null;
+                        $dataPw = null;
+                        $dataLN = null;
+                        $dataFN = null;
+                        header("Location:./login.phtml?signin=true");
+                    }
+                    catch(Exception $e){
+                        echo "회원가입 실패!<br>";
+                    }
+                }
+            }
+
+
+            mysqli_close($conn);
+        ?>
+    </head>
+    <body>
+        <h1>Telegram bot message translation</h1>
+        <a href="../">메인으로</a><br>
+        <div>
+            <form id="form1" name="inputForm" method="POST" action="signin.phtml">
+                <?php
+                    echo "ID             : <input type=text name='id' id='id' class='check' value='".$dataId."' onkeyup='enterkey()' autofocus='autofocus'><br>";
+                    echo "PASSWORED       : <input type=password name='pw' id='pw' class='check' value='".$dataPw."' onkeyup='enterkey()'><br>";
+                    echo "PASSWORED 확인  : <input type=password name='pwc' id='pwc' class='check' value='".$dataPw."' onkeyup='enterkey()'><br>";
+                    echo "성             : <input type=text name='lastName' id='lName' class='check' value='".$dataLN."' onkeyup='enterkey()'><br>";
+                    echo "이름           : <input type=text name='firstName' id='fName' class='check' value='".$dataFN."' onkeyup='enterkey()'><br>";
+                ?>
+                <input type="button" onclick="nullCheck()" value="회원가입">
+            </form>
+        </div>
+        <script language="javascript">
+
+            function nullCheck(){
+                var inbox = [
+                    document.getElementById('id'),
+                    document.getElementById('pw'),
+                    document.getElementById('pwc'),
+                    document.getElementById('lName'),
+                    document.getElementById('fName')
+                ];
+                for(var i = 0; i < inbox.length; i++){
+                    if(inbox[i].value.length == 0){
+                        alert("해당 필드가 비어있습니다.");
+                        inbox[i].focus();
+                        return;
+                    }
+                    else if(inbox[i].value.length > 20){
+                        alert("해당 필드는 20글자 이상 넣을 수 없습니다.");
+                        inbox[i].value=null;
+                        inbox[i].focus();
+                        return;
+                    }
+                }
+                if(inbox[1].value != inbox[2].value){
+                    alert("두 비밀번호가 다릅니다!");
+                    inbox[1].focus();
+                    return;
+                }
+                let subBtn = document.getElementById("form1");
+                subBtn.submit();
+                return;
+            }
+            function enterkey(){
+                // 엔터키 눌렸을 때
+                if(window.event.keyCode==13){
+                    //alert("엔터 감지");
+                    nullCheck();
+                }
+            }
+        </script>
+    </body>
+</html>

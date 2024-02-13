@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <style>
+            input{
+                border:1;
+            }
+        </style>
+        <?php 
+            include("../mysqlCon.php");
+
+
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+
+            try{$transCode=$_POST['alphaCode'];}
+            catch(exception $e){$transCode=null;}
+
+            if($_SESSION['id']!=null){ # 로그인 상태라면
+                if($transCode!=null){ # 변경요청 있으면
+                    $sqlStr = "UPDATE user SET languageAlpha='".$transCode."' WHERE id='".$_SESSION['id']."'";
+                    //echo $sqlStr;
+                    $result = mysqli_query($conn, $sqlStr);
+                    echo "[".$_SESSION['id']."]변경 완료! ->".$transCode;
+                }
+            }
+        ?>
+        <title>DB print</title>
+    </head>
+    <body>
+        <h1>번역 지원 언어 목록</h1>
+        <a href="../">main으로 돌아가기</a><br><br>
+
+        <div>
+            <form id="chLangForm" method="POST" action="languageList.phtml">
+            <table border='1'>
+                <th>Alpha code</th><th>en name</th><th>translation name [선택시 언어 변경]</th>
+                <?php
+
+                    $sqlStr = "SELECT * FROM languageCode";
+                    $result = mysqli_query($conn, $sqlStr);
+
+                    while($row = mysqli_fetch_array($result)){
+#                    echo $row['alpha']." : ".$row['name'].'<br>';
+                        echo "<tr>";
+                        echo "<td>".$row['alpha']."</td>";
+                        echo "<td>".$row['name']."</td>";
+                        //echo "<td><a href='' onclick='chLang(".$row['alpha'].")'>".$row['transName']."</td>";
+                        echo "<td><input type='button' value='".$row['transName']."' onclick='chLang(\"".$row['alpha']."\")'></td>";
+                        echo "</tr>";
+                    }
+                    $sqlStr = "SELECT COUNT(*) FROM languageCode";
+                    $result = mysqli_query($conn, $sqlStr);
+                    $row = mysqli_fetch_array($result)[0];
+                    echo "<tr>";
+                    echo "<td>지원 언어</td>";
+                    echo "<td colspan='2'>".$row."개</td>";
+                    echo "</tr>";
+
+                    echo '<input id="userId" type="hidden" name=userId value="'.$_SESSION["id"].'">';
+                    echo '<input id="alphaCode" type="hidden" name=alphaCode value="">';
+#                    echo $_SESSION["id"];
+
+
+                    mysqli_close($conn);
+                ?>
+            </table>
+            </form>
+        <div>
+        <div>
+            
+        </div>
+        <script language="javascript">
+            var userId = document.getElementById('userId').value;
+            var apCode = document.getElementById('alphaCode');
+            var chForm = document.getElementById('chLangForm');
+
+            function chLang(alphaCode){
+                if(userId == null){
+                    alert("로그인을 먼저 하셔야합니다!");
+                }
+                else{
+                    var chCheck = confirm("언어를 변경하시겠습니까?");
+                    if(chCheck){
+                        apCode.value=alphaCode;
+                        chForm.submit();
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="./link.css">
+        <?php include("./mysqlCon.php");?>
+        <title>번역채팅</title>
+    </head>
+    <body>
+        <?php
+            $testBool = false;
+            if($testBool){
+                echo "
+                    <a href='./nav/maker.phtml'>infor</a><br>
+                    <a href='./nav/plan.phtml'>계획 발표</a><br>
+                    <a href='./log/logBase.phtml'>보고test</a><br>
+                    <a href='./log/log1.phtml'>중간보고1</a><br>
+                    ";
+            }
+        ?>
+        <a href="./"><h1>번역채팅</h1></a>
+        <a href="./nav/languageList.phtml">번역 가능한 언어 목록</a><br>
+        <?php
+            if($_SESSION["id"] == null){
+                echo "
+                    <a href='./user/signin.phtml'>회원가입</a><br>
+                    <a href='./user/login.phtml'>로그인</a><br>
+                    ";
+            }
+            else{
+                echo "
+                    <a href='./user/user.phtml'>".$_SESSION['firstName']."님 환영합니다.</a>
+                    [<a href='./user/logout.phtml'>로그아웃</a>]<br>
+                    <a href='./chat/mainRoom.phtml'>채팅방 입장</a><br>
+                    <br>
+                    ";
+            }
+        ?>
+        <br><br>
+        <div>
+            <?php
+                $conn = new mysqli($host, $user, $password, $dbName);
+                if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+
+#                $sqlStr = "SELECT * FROM languageCode";
+#                $result = mysqli_query($conn, $sqlStr);
+
+                mysqli_close($conn);
+            ?>
+            <?php
+                
+            ?>
+        </div>
+    </body>
+</html>

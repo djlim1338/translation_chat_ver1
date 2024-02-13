@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <title>login</title>
+        <?php 
+            include("../mysqlCon.php");
+            if($_SESSION["id"] == null) header("Location:../"); // 로그인 상태가 아니면 강제로 메인으로 이동
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+
+            try{$roomTitle = $_POST['title'];}
+            catch(Exception $e){$roomTitle = null;}
+            try{$publicState = $_POST['publicState'];}
+            catch(Exception $e){$publicState = null;}
+            try{$invite = $_POST['friend'];}
+            catch(Exception $e){$invite = null;}
+#            echo "" . $roomTitle . "<br>";
+#            echo "" . $publicState . "<br>";
+#            foreach($invite as $arrData){
+#                echo $arrData." ";
+#            }
+
+            function rChatId($maxNum){
+                $rCase = 0;
+                $rNum = 0;
+                $rChar = "";
+                for($i=0; $i<$maxNum; $i++){
+                    $rCase = mt_rand(1,3);
+                    switch($rCase){
+                        case 1: // 숫자 0~9 넣음. 물론 char형
+                            $rNum = mt_rand(48,57);
+                            $rChar = $rChar.chr($rNum);
+                            break;
+                        case 2: // 대문자 A~Z
+                            $rNum = mt_rand(65,90);
+                            $rChar = $rChar.chr($rNum);
+                            break;
+                        case 3: // 소문자 a~z
+                            $rNum = mt_rand(97,122);
+                            $rChar = $rChar.chr($rNum);
+                            break;
+                    }
+                }
+                return $rChar;
+            }
+
+            if($roomTitle!=null){
+                do{
+                    $chatId=rChatId(10);
+                    $sqlStr="SELECT COUNT(*) FROM chatRoom WHERE chatId='".$chatId."'";
+                    $result=mysqli_query($conn, $sqlStr);
+                    $row=mysqli_fetch_array($result);
+                }while($row[0]!=0);
+
+                if($publicState)$pState = 1;
+                else $pState = 0;
+                $sqlStr="INSERT INTO chatRoom(chatId, roomName, hostId, state) VALUES('".$chatId."', '".$roomTitle."', '".$_SESSION['id']."', ".$pState.")";
+                $result=mysqli_query($conn, $sqlStr);
+
+                $sqlStr="INSERT INTO chatLink(chatId, user) VALUES('".$chatId."', '".$_SESSION['id']."')";
+                $result=mysqli_query($conn, $sqlStr);
+                foreach($invite as $arrData){
+                    $sqlStr="INSERT INTO chatLink(chatId, user) VALUES('".$chatId."', '".$arrData."')";
+                    $result=mysqli_query($conn, $sqlStr);
+                }
+                echo "[".$roomTitle."] 채팅방 개설 성공!";
+                $roomTitle = null;
+                $publicState = null;
+            }
+        ?>
+    </head>
+    <body>
+        <h1>Telegram bot message translation</h1>
+        <a href="../">메인으로</a><br>
+        <a href="./mainRoom.phtml">뒤로</a><br>
+        <dir>
+            <form id="form1" method="POST" action="makeChatRoom.phtml">
+                방 제목 : <input type="text" id="title" name="title" value="<?php echo "$roomTitle" ?>"><br>
+                공개 여부 : <input type="checkbox" id="publicState" name="publicState" <?php if($publicState)echo "checked='checked'"; ?>><br>
+                초대할 사람 :<br>
+                <select id="friend" name="friend[]" size="8" multiple style="width:300px">
+                    <?php
+                        $sqlStr = "SELECT id, lastName, firstName FROM user";
+                        $result = mysqli_query($conn, $sqlStr);
+                        while($row = mysqli_fetch_array($result)){
+                            if($row['id'] != $_SESSION['id'])
+                                //echo "<option value=".$row['id'].">".$row['lastName']."".$row['firstName']." (".$row['id'].")</option>";
+                                echo "<option value=".$row['id'].">".$row['id']."</option>";
+                        }
+                    ?>
+                </select>
+                <input type="button" value="방 생성" onclick="createRoom()">
+            </form>
+        </dir>
+        <script language="javascript">
+            var frm1 = document.getElementById("form1");
+            var title = document.getElementById("title");
+            var checkbox = document.getElementById("checkbox");
+            var friend = document.getElementById("friend");
+
+            function createRoom(){
+                if(title.value.length == 0){
+                    alert("방의 제목이 없습니다.");
+                    title.focus();
+                    return;
+                }
+                else{
+                    frm1.submit();
+                    return;
+                }
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,49 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <style>
+            table{
+                border=1;
+            }
+        </style>
+        <title></title>
+        <?php 
+            include("../mysqlCon.php");
+            if($_SESSION["id"] == null) header("Location:../"); // 로그인 상태가 아니면 강제로 메인으로 이동
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+        ?>
+    </head>
+    <body>
+        <h1>탈퇴 완료</h1>
+        <a href="../">메인으로</a><br><br>
+
+        <?php
+            $sqlStr = "SELECT * FROM user WHERE id = '".$_SESSION["id"]."'";
+            $result = mysqli_query($conn, $sqlStr);
+            $row = mysqli_fetch_array($result);
+
+            echo "[".$row["lastName"]." ".$row["firstName"]."]님 탈퇴를 완료했습니다.<br>";
+            try{$delCheck = $_POST['delMsg'];}
+            catch(Exception $e){$delCheck = null;}
+            
+            $sqlStr = "DELETE FROM user WHERE id='".$_SESSION['id']."'";
+            if($delCheck != null){
+                echo "선택하신 값에 따라서 보여지는 id는 <탈퇴한 유저> 로 대체되며 작성하신 message는<삭제된 msg> 문구로 대체됩니다. ";
+                $sqlStr = "UPDATE message SET userId='<탈퇴한 유저>' ,data='<삭제된 msg>' WHERE userId='".$_SESSION['id']."'";
+            }
+            else{
+                echo "선택하신 값에 따라서 보여지는 id는 <탈퇴한 유저> 로 대체되며 작성하신 message 보존됩니다. ";
+                $sqlStr = "UPDATE message SET userId='<탈퇴한 유저>' WHERE userId='".$_SESSION['id']."'";
+            }
+            $result = mysqli_query($conn, $sqlStr);
+        ?>
+
+        <script language="javascript">
+        </script>
+    </body>
+</html>
+

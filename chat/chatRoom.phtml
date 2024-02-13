@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <title></title>
+        <?php 
+            include("../mysqlCon.php");
+            if($_SESSION["id"] == null) header("Location:../"); // 로그인 상태가 아니면 강제로 메인으로 이동
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+
+            try{$inChatId=$_POST['privateRoom'];}
+            catch(Exception $e){header("Location:./mainRoom/phtml");}
+
+            echo '<input id="networkLocation" type="hidden" name="networkLocation" value="'.$_POST["networkLocation"].'">';
+        ?>
+    </head>
+    <body>
+        <h1>Telegram bot message translation</h1>
+        <a href="../">메인으로</a><br>
+        <a href="./mainRoom.phtml">뒤로</a><br>
+        <div>
+            <textarea rows="5" cols="83" id="logTextArea" readonly style="border:yes; resize:none; display:block;" onkeyup="enterkey()">
+            </textarea>
+            <textarea rows="30" cols="83" id="textArea" readonly style="border:yes; resize:none;" onkeyup="enterkey()">
+            </textarea>
+        </div>
+        <div>
+            <input type="text" name="msg" id="msg" style="width:500px; height:20px; font-size:15px" onkeyup="enterkey()" autofocus='autofocus'>
+            <input type="button" name="send" id="send" value="보내기" onclick="sendMsg()" onkeyup="enterkey()">
+            <input type="hidden" name="hidden_chatId" id="hidden_chatId" value="<?php echo $inChatId ?>">
+            <input type="hidden" name="hidden_userId" id="hidden_userId" value="<?php echo $_SESSION['id'] ?>">
+        </div>
+
+        <script language="javascript">
+            // ------------------------------------------------------------------------------------------
+            // 문자열 제어 관련 
+
+            var logTextArea = document.getElementById('logTextArea'); // 로그 텍스트 공간
+            var textArea = document.getElementById('textArea'); // 채팅 텍스트 공간
+            var textBox = document.getElementById('msg'); // 메시지 입력창
+            var hiddenChatId = document.getElementById('hidden_chatId'); // 채팅방 id hidden input
+            var hiddenUserId = document.getElementById('hidden_userId'); // 사용자 id hidden input
+            logTextArea.value = null;
+            textArea.value = null;
+            var LINE_STR = "----------------------------------------";
+            var SPACE_STR = "                                         ";
+            var STR_MAX_SIZE = 20;
+
+            logTextArea.value+="채팅방id["+hiddenChatId.value+"] / 사용자id["+hiddenUserId.value+"]\n";
+
+            // ------------------------------------------------------------------------------------------
+            // 웹소켓 관련
+
+
+            //var webSocket = new WebSocket("ws://182.228.58.73:51954");
+            //var webSocket = new WebSocket("ws://192.168.219.8:51954");
+            netValue = "ws://" + document.getElementById('networkLocation').value;
+            var webSocket = new WebSocket(netValue);
+            // 소켓 접속이 되면 호출되는 함수
+            webSocket.onopen = function(message){
+                logTextArea.value += "server connect...\n";
+                webSocket.send(hiddenChatId.value + "," + hiddenUserId.value);
+                //webSocket.send("chatId," + window.sessionStorage.getItem("id"));
+            };
+
+            // 소켓 접속이 끝나면 호출되는 함수
+            webSocket.onclose = function(message){
+                logTextArea.value += "server disconnect...\n";
+            };
+
+            // 소켓 통신중 오류가 발생하면 호출되는 함수
+            webSocket.onerror = function(message){
+                logTextArea.value += "error...\n";
+                
+            };
+
+            // ------------------------------------------------------------------------------------------
+
+            function autoScroll(){
+                document.getElementById("textArea").scrollTop = document.getElementById("textArea").scrollHeight;
+            }
+
+            function makeMsg(data, userId, inDate){
+                var inData = data;
+                var printData = "[ " +  userId + " ]" + "\n";
+                var spaceData = "";
+                if(hiddenUserId.value == userId){
+                    printData = SPACE_STR + printData + SPACE_STR;
+                    spaceData = SPACE_STR;
+                }
+                var lineBreakCount = 1; // 줄바꿈 기준
+                for(var i = 1; i <= inData.length; i++){
+                    lineBreakCount++;
+                    printData += inData[i-1];
+                    if(inData[i-1] == '\n'){ // 줄바꿈이 문자열에 포함되어있으면 기준 초기화
+                        printData += spaceData;
+                        lineBreakCount = 1;
+                    }
+                    else if(lineBreakCount % STR_MAX_SIZE == 0){ // 줄바꿈 기준에 맞으면 줄바꿈 및 기준초기화
+                        printData += ("\n" + spaceData);
+                        lineBreakCount = 1;
+                    }
+                }
+                printData += "\n" + spaceData + "[" + inDate + " ]" + "\n";
+                printData += "\n\n";
+                return printData;
+            }
+
+            function sendMsg(){
+                var inData = textBox.value;
+                textBox.value=null;
+                /*
+                printData = makeMsg(inData, hiddenUserId.value);
+                textArea.value += printData;
+                */
+                webSocket.send(inData);
+                autoScroll();
+            }
+
+            webSocket.onmessage = function(message){
+                //var inData = message.data; // 왜 string 형이지
+                var inData = JSON.parse(message.data); // string이 돼서 json형식으로 바꿈.
+                var userId = inData['userId']; // 메시지 전송자 ID
+                var msgStr = inData['msgStr']; // 메시지 데이터
+                var msgDate = inData['msgDate']; // 메시지 데이터
+                printData = makeMsg(msgStr, userId, msgDate)
+                textArea.value += printData;
+                autoScroll();
+            };
+
+            function enterkey(){
+                // 엔터키 눌렸을 때
+                if(window.event.keyCode==13){
+                    //alert("엔터 감지");
+                    sendMsg();
+                }
+            }
+
+            // ------------------------------------------------------------------------------------------
+
+
+        </script>
+    </body>
+</html>
+

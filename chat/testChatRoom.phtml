@@ -1,0 +1,34 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <title></title>
+        <?php 
+            include("../mysqlCon.php");
+            if($_SESSION["id"] == null) header("Location:../"); // 로그인 상태가 아니면 강제로 메인으로 이동
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+        ?>
+    </head>
+    <body>
+        <h1>Telegram bot message translation</h1>
+        <a href="../">메인으로</a><br>
+        <div>
+            <textarea rows="5" cols="83" id="logTextArea" readonly style="border:yes; resize:none; display:block;" onkeyup="enterkey()">
+            </textarea>
+            <textarea rows="30" cols="83" id="textArea" readonly style="border:yes; resize:none;" onkeyup="enterkey()">
+            </textarea>
+        </div>
+        <div>
+            <input type="text" name="msg" id="msg" style="width:500px; height:20px; font-size:15px" onkeyup="enterkey()" autofocus='autofocus'>
+            <input type="button" name="send" id="send" value="보내기" onclick="sendMsg()" onkeyup="enterkey()">
+            <input type="hidden" name="hidden_userId" id="hidden_userId" value="<?php echo $_SESSION['id'] ?>">
+            <input type="hidden" name="hidden_chatId" id="hidden_chatId" value="chatId">
+        </div>
+
+        <script language="javascript" type="text/javascript" src="./chat.js"></script>
+    </body>
+</html>
+

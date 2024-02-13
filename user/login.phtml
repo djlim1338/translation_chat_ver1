@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <title>login</title>
+        <?php 
+            include("../mysqlCon.php");
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+
+            try{$dataId = $_POST['id'];}
+            catch(Exception $e){$dataId = null;}
+            try{$dataPw = $_POST['pw'];}
+            catch(Exception $e){$dataPw = null;}
+
+            if($_GET["signin"] == true){
+                echo "회원가입 성공!<br>";
+                echo "로그인 해주세요!<br>";
+            }
+            if($dataId != null){
+                $sqlStr = "SELECT id, AES_DECRYPT(unhex(password), 'D'), firstName, lastName FROM user WHERE id = '".$dataId."'";
+#                echo "[".$sqlStr."]<br>";
+                $result = mysqli_query($conn, $sqlStr);
+                $row = mysqli_fetch_array($result);
+#                echo "[".$row[0]."]<br>";
+#                echo "[".$row[1]."]<br>";
+                if($row[0] == $dataId){
+#                    echo "아이디 확인 완료<br>";
+                    if($row[1] == $dataPw){
+                        echo "비밀번호 확인 완료<br>";
+                        $_SESSION["id"] = $dataId;
+                        $_SESSION["password"] = $dataPw;
+                        $_SESSION["firstName"] = $row[2];
+                        $_SESSION["lastName"] = $row[3];
+                        header("Location:../");
+                    }
+                    else{echo "비밀번호가 틀렸습니다.";}
+                }
+                else{echo "해당 ID를 찾을 수 없습니다.";}
+            }
+
+#                $sqlStr = "SELECT * FROM languageCode";
+#                $result = mysqli_query($conn, $sqlStr);
+
+            mysqli_close($conn);
+        ?>
+    </head>
+    <body>
+        <h1>Telegram bot message translation</h1>
+        <a href="../">메인으로</a><br>
+        <div>
+            <form id='form1' method="POST" action="./login.phtml">
+                <?php
+                    echo "ID : <input type=text id='id' name='id' value='".$dataId."' onkeyup='enterkey()' autofocus='autofocus'><br>";
+                    echo "PASSWORED : <input type=password id='pw' name='pw' value='".$dataPw."' onkeyup='enterkey()'><br>";
+                ?>
+                <input type="button" onclick="nullCheck()" value="로그인">
+            </form>
+        </div>
+        <script language="javascript">
+            function nullCheck(){
+                var inbox = [
+                    document.getElementById('id'),
+                    document.getElementById('pw')
+                ];
+                for(var i = 0; i < inbox.length; i++){
+                    if(inbox[i].value.length == 0){
+                        alert("해당 필드가 비어있습니다.");
+                        inbox[i].focus();
+                        return;
+                    }
+                }
+                let subBtn = document.getElementById("form1");
+                subBtn.submit();
+                return;
+            }
+            function enterkey(){
+                // 엔터키 눌렸을 때
+                if(window.event.keyCode==13){
+                    //alert("엔터 감지");
+                    nullCheck();
+                }
+            }
+        </script>
+    </body>
+</html>

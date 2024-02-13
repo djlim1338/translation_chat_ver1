@@ -1,0 +1,17 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <title>login</title>
+        <?php 
+            include("../mysqlCon.php");
+            session_unset();
+            session_destroy();
+            header("Location:../");
+        ?>
+    </head>
+    <body>
+    </body>
+</html>

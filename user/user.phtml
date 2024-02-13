@@ -1,0 +1,70 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="../link.css">
+        <style>
+            table{
+                border=1;
+            }
+        </style>
+        <title></title>
+        <?php 
+            include("../mysqlCon.php");
+            if($_SESSION["id"] == null) header("Location:../"); // 로그인 상태가 아니면 강제로 메인으로 이동
+            $conn = new mysqli($host, $user, $password, $dbName);
+            if(!$conn){die('연결 실패 : '.mysqli_error($conn));}
+        ?>
+    </head>
+    <body>
+        <h1>사용자 정보</h1>
+        <a href="../">메인으로</a><br><br>
+
+        <table border="1">
+            <?php
+                $sqlStr = "SELECT * FROM user WHERE id = '".$_SESSION["id"]."'";
+                $result = mysqli_query($conn, $sqlStr);
+                $row = mysqli_fetch_array($result);
+
+                echo "<tr><td>ID </td><td>".$row["id"]."</td></tr>";
+
+                echo "<tr><td>성함</td><td>".$row["lastName"]." ".$row["firstName"]."</td></tr>";
+
+                if($row["telegramChatId"]) $tmp = "공개";
+                else $tmp = "비공개";
+                echo "<tr><td>공개여부 </td><td>".$tmp."</td></tr>";
+
+                if($row["telegramChatId"]==null) $tmp = "연결안함";
+                else $tmp = "연결완료";
+                echo "<tr><td>텔레그램 </td><td>".$tmp."</td></tr>";
+
+                echo "<tr><td>번역 언어 </td><td>".$row["languageAlpha"]."</td></tr>";
+
+            ?>
+            <!--
+            <form id='quitForm' method='POST' action='quit.phtml'>
+                <input type='button' name='quit' id='quit' value='회원 탈퇴' onclick='quitUser()'>
+                메시지 전부 삭제<input type='checkBox' name='delMsg' id='delMsg' checked>
+            </form>
+            -->
+        </table>
+
+        <script language="javascript">
+            function quitUser(){
+                var printStr='탈퇴를 진행하시겠습니까?';
+                if(document.getElementById('delMsg').checked){
+                    printStr = printStr+"\n메시지 기록이 전부 삭제됩니다.";
+                }
+                else{
+                    printStr = printStr+"\n메시지 기록이 보존되며 ID만 '탈퇴한 유저'로 변경됩니다.";
+                }
+                var quitCheck=confirm(printStr);
+                if(quitCheck){
+                    document.getElementById('quitForm').submit()
+                }
+            }
+        </script>
+    </body>
+</html>
+
